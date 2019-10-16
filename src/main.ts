@@ -65,6 +65,13 @@ const test = (): void => {
         size: 10,
     });
 
+    const ornoSearch = crappySearch.search({
+        key: 'data.name',
+        term: 'orno',
+        fuzzy: 2,
+        size: 10,
+    });
+
     console.log("Results for anana:")
     for (const term of ananaSearch) {
         console.log(term);
@@ -72,6 +79,11 @@ const test = (): void => {
 
     console.log("Results for nesa:")
     for (const term of milanesaSearch) {
+        console.log(term);
+    }
+
+    console.log("Results for orno:")
+    for (const term of ornoSearch) {
         console.log(term);
     }
 };

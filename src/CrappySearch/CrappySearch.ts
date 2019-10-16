@@ -1,6 +1,8 @@
 import levenshtein = require('js-levenshtein');
 import { LinkedList } from './LinkedList';
 
+const DROP_CHARS_REGEX = /,\.\?!¡¿\(\)\$"'/g;
+
 export interface Query {
     term: string;
     key: string;
@@ -18,9 +20,20 @@ function* resultGenerator<T>(documents: T[], query: Query): Generator<T, void, b
 
     for (let i = 0; i < size; i++) {
         const [bestElement, bestScore]: [T, number] = documentsList.findMinAndDelete((doc: T) => {
-            const docTerm = getTermByKey(doc, key);
+            const docTerm: string = getTermByKey(doc, key);
 
-            return levenshtein(term, docTerm) - (docTerm.includes(term) ? fuzzy : 0);
+            const tokens: string[] = docTerm
+                .toLowerCase()
+                .replace(DROP_CHARS_REGEX, ' ')
+                .split(' ')
+
+            const bestTokenScore = tokens.reduce((bestMatch: number, token: string) => {
+                const distance: number = levenshtein(term, token) - (token.includes(term) ? fuzzy : 0);
+
+                return distance < bestMatch ? distance : bestMatch;
+            }, Infinity);
+
+            return bestTokenScore;
         });
 
         // If we didn't get a good enough value end the iterator, we won't get better.
@@ -44,12 +57,12 @@ const getTermByKey = (document: any, key: string): string => {
     let term = document;
     pathToKey.forEach((part: string) => {
         term = term[part];
-    })
+    });
 
     return term;
-}
+};
 
-export type SearchResults<T> = Generator<T, void, boolean>
+export type SearchResults<T> = Generator<T, void, boolean>;
 
 export class CrappySearch<T> {
     private documents: T[];
@@ -61,19 +74,19 @@ export class CrappySearch<T> {
     public search = (query: Query): SearchResults<T> => {
         const { size, key } = query;
 
-        if(this.documents.length === 0) {
-            throw new Error("No documents to search");
+        if (this.documents.length === 0) {
+            throw new Error('No documents to search');
         }
 
         // Check that the key is valid
         let term: any;
         try {
             term = getTermByKey(this.documents[0], key);
-        } catch(err) {
+        } catch (err) {
             throw new Error(`The provided key '${key}' does not match the documents`);
         }
 
-        if(typeof term !== 'string') {
+        if (typeof term !== 'string') {
             throw new Error(`The provided key '${key}' does not resolve to a string in the documents`);
         }
 
